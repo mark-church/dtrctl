@@ -17,11 +17,13 @@ DEST_DTR_PASSWORD=docker123
 
 
 main() {
-    getOrgs
-    getRepos
-    getTeams
-    getTeamMembers
-    getTeamRepoAccess
+    if [ ! "$SKIP_SYNC" ]; then
+        getOrgs
+        getRepos
+        getTeams
+        getTeamMembers
+        getTeamRepoAccess
+    fi
 
     if [ "$MIGRATE_ORG" ]; then
         putOrgs
@@ -37,8 +39,6 @@ main() {
     if [ "$PRINT_ACCESS" ]; then
         printAccessMap
     fi
-
-
 }
 
 
@@ -60,7 +60,9 @@ getOrgs() {
 
     cat orgList | while IFS= read -r i;
     do
-        mkdir ./$i
+        if [ ! -d ./$i ]; then
+            mkdir ./$i
+        fi
     done
 }
 
@@ -82,8 +84,10 @@ getTeams() {
         https://"$SRC_DTR_URL"/enzi/v0/accounts/$i/teams | jq -c '.teams[] | {name: .name, description: .description}' > ./$i/teamConfig
 
         cat ./$i/teamConfig | while IFS= read -r j;
-        do
-            mkdir ./$i/$(echo $j | jq -r '.name')
+        do     
+            if [ ! -d ./$i/$(echo $j | jq -r '.name') ]; then
+                mkdir ./$i/$(echo $j | jq -r '.name')
+            fi
         done
     done
 }
@@ -156,9 +160,6 @@ putTeams() {
     done
 
 }
-
-
-
 
 putTeamMembers() {
     #Responds with 200 even though team members already exist (I guess this is because of PUT)
@@ -246,8 +247,20 @@ printAccessMap() {
 }
 
 
-help() {
-    echo "help"
+usage() {
+    echo ""
+    echo "Usage: dtrctl COMMAND"
+    echo "Pronounced: dee-tee-arr-cuttle"
+    echo ""
+    echo "Options"
+    echo ""
+    echo "-c, --config           Set configuration file that contians env variable assignments for src and dest DTRs"
+    echo "-o, --migrate-org      Migrate orgs, repos, teams, and access rights from src to dest DTR"
+    echo "-i, --migrate-image    Migrate all images from src to dest DTR"
+    echo "-p, --print-access     Print mapping of access rights between teams and repos"
+    echo "-s, --skip-sync        Skip sync with source DTR"
+    echo "--help                 Print usage"
+    echo ""
 }
 
 
@@ -266,7 +279,7 @@ do
         shift 1
         ;;
 
-        -a|--print-access-map)
+        -p|--print-access)
         PRINT_ACCESS=1
         shift 1
         ;;
@@ -277,33 +290,20 @@ do
         shift 2
         ;;
 
-        --src-dtr)
-        SRC_DTR_URL="$2"
-   #     if [[ $SRC_DTR_URL == "" ]]; then break; fi
-        shift 2
+        -s|--skip-sync)
+        SKIP_SYNC=1
+        shift 1
         ;;
 
-        --src-dtr)
-        SRC_DTR_URL="$2"
-   #     if [[ $SRC_DTR_URL == "" ]]; then break; fi
-        shift 2
-        ;;
-
-        --dest-dtr)
-        DEST_DTR_URL="$2"
-  #      if [[ $DEST_DTR_URL == "" ]]; then break; fi
-        shift 2
-        ;;
-
-        --help)
-        help
-        break
+        -h|--help)
+        usage
+        exit 1
         ;;
 
         *)  
         echo "Unknown argument: $1"
-        help
-        break
+        usage
+        exit 1
         ;;
 
     esac
