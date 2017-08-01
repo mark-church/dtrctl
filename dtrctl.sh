@@ -1,5 +1,21 @@
 #!/bin/bash
 
+#############################################################
+
+## PARAMETERS to reach the SRC DTR
+SRC_DTR_URL=dtr2.church.dckr.org
+SRC_DTR_USER=admin
+SRC_DTR_PASSWORD=docker123
+SRC_NO_OF_REPOS=100
+
+## PARAMETERS to reach the DESTINATION DTR
+DEST_DTR_URL=dtr2.church.dckr.org
+DEST_DTR_USER=admin
+DEST_DTR_PASSWORD=docker123
+
+#############################################################
+
+
 main() {
     if [ ! "$SKIP_SYNC" ]; then
         getOrgs
@@ -24,6 +40,10 @@ main() {
         printAccessMap
     fi
 }
+
+
+
+
 
 ########################### 
 #             GET         #
@@ -229,14 +249,14 @@ printAccessMap() {
 
 usage() {
     echo ""
-    echo "Usage: dtrctl -c [confguration file] COMMAND"
+    echo "Usage: dtrctl COMMAND"
     echo "Pronounced: dee-tee-arr-cuttle"
     echo ""
     echo "Options"
     echo ""
     echo "-c, --config           Set configuration file that contians env variable assignments for src and dest DTRs"
-    echo "-o, --sync-org      Migrate orgs, repos, teams, and access rights from src to dest DTR"
-    echo "-i, --sync-image    Migrate all images from src to dest DTR"
+    echo "-o, --migrate-org      Migrate orgs, repos, teams, and access rights from src to dest DTR"
+    echo "-i, --migrate-image    Migrate all images from src to dest DTR"
     echo "-p, --print-access     Print mapping of access rights between teams and repos"
     echo "-s, --skip-sync        Skip sync with source DTR"
     echo "--help                 Print usage"
@@ -249,12 +269,12 @@ usage() {
 while [[ $# -gt 0 ]]
 do
     case "$1" in
-        -o|--sync-org)
+        -o|--migrate-org)
         MIGRATE_ORG=1
         shift 1
         ;;
 
-        -i|--sync-images)
+        -i|--migrate-images)
         MIGRATE_IMAGES=1
         shift 1
         ;;
