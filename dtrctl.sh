@@ -27,6 +27,7 @@ main() {
 
     if [ "$MIGRATE_ORG" ]; then
         putOrgs
+        putRepos
         putTeams
         putTeamMembers
         putTeamRepoAccess
