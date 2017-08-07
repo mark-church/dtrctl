@@ -187,6 +187,8 @@ putTeamRepoAccess() {
 ###########################
 
 migrateImages() {
+    docker login "$SRC_DTR_URL" --username "$SRC_DTR_USER" --password "$SRC_DTR_PASSWORD";
+    docker login "$DEST_DTR_URL" --username "$SRC_DTR_USER" --password "$SRC_DTR_PASSWORD";
     cat orgList | sort -u | while IFS= read -r i;
     do
         cat ./$i/repoConfig | jq -c -r '.name' | while IFS= read -r j;
@@ -194,7 +196,7 @@ migrateImages() {
             TAGS=$(curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
             https://"$SRC_DTR_URL"/api/v0/repositories/${i}/${j}/tags | jq -c -r '.[].name')
             
-            echo "$TAGS" | jq -c -r '.' | while IFS= read -r k;
+            for k in $TAGS;  
             do
                 docker pull "$SRC_DTR_URL/$i/$j:$k"
                 docker tag "$SRC_DTR_URL/$i/$j:$k" "$DEST_DTR_URL/$i/$j:$k"
