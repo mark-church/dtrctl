@@ -1,7 +1,7 @@
 ## PARAMETERS to reach the SRC DTR
-SRC_DTR_URL=<pass>
-SRC_DTR_USER=<user>
-SRC_DTR_PASSWORD=<pass>
+SRC_DTR_URL=dtr.church.dckr.org	
+SRC_DTR_USER=admin	
+SRC_DTR_PASSWORD=docker123
 SRC_NO_OF_REPOS=100
 
 ## PARAMETERS to reach the DESTINATION DTR

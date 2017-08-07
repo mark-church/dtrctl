@@ -42,6 +42,9 @@ DEST_DTR_PASSWORD=<password>
 ## Examples
 
 ### Pulling the metadata locally
+
+`dtrctl` will pull the metadata from the source DTR each time the command is run unless the `--skip-sync` flag is used. 
+
 ```
 $ ./dtrctl.sh -c conf.txt
 $ tree
