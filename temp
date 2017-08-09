@@ -1,0 +1,29 @@
+AUTH_TOKEN="$(curl -sk -d '{"username":"admin","password":"docker123"}' https://ucp.church.dckr.org/auth/login | jq -r .auth_token 2>/dev/null)"
+
+curl -sk --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
+            https://"$SRC_DTR_URL"/enzi/v0/accounts/${i}/teams/${j}/members | jq -c '.members[] | {name: .member.name, isAdmin: .isAdmin, isPublic: .isPublic}' \
+            > ./$i/$j/members
+
+
+
+CURL_OPTS='-ks -H "Content-Type: application/json" -H "Accept: application/json"'
+
+
+
+curl -ks -H "Authorization: Bearer ${AUTH_TOKEN}" \
+    https://"$SRC_DTR_URL"/enzi/v0/accounts?limit=$SRC_NO_OF_REPOS | \
+    jq -c '.accounts[] | select(.isOrg==true) | {name: .name, fullName: .fullName, isOrg: .isOrg}'
+
+
+echo ""${CURL_OPTS}" -H "Authorization: Bearer ${AUTH_TOKEN}" \
+    https://"$SRC_DTR_URL"/enzi/v0/accounts?limit=$SRC_NO_OF_REPOS | \
+    jq -c '.accounts[] | select(.isOrg==true) | {name: .name, fullName: .fullName, isOrg: .isOrg}'"
+
+
+curl -sk \
+    -H "Authorization: Bearer $AUTH_TOKEN" \
+    https://"$SRC_DTR_URL"/enzi/v0/accounts?limit=$SRC_NO_OF_REPOS | \
+    jq -c '.accounts[] | select(.isOrg==true) | {name: .name, fullName: .fullName, isOrg: .isOrg}'
+
+
+docker login "$SRC_DTR_URL" -u "$SRC_DTR_USER" -p "$SRC_DTR_PASSWORD"

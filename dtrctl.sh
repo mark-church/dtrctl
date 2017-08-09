@@ -1,6 +1,8 @@
 #!/bin/bash
 
 main() {
+    authenticate
+
     if [ ! "$SKIP_SYNC" ]; then
         getOrgs
         getRepos
@@ -25,14 +27,23 @@ main() {
     fi
 }
 
+authenticate() {
+    docker login "$SRC_DTR_URL" -u "$SRC_DTR_USER" -p "$SRC_DTR_PASSWORD"
+    SRC_DTR_TOKEN=$(cat ~/.docker/config.json | jq -r ".auths[\"$SRC_DTR_URL\"].identitytoken")
+
+    docker login "$DEST_DTR_URL" -u "$DEST_DTR_USER" -p "$DEST_DTR_PASSWORD"
+    DEST_DTR_TOKEN=$(cat ~/.docker/config.json | jq -r ".auths[\"$DEST_DTR_URL\"].identitytoken")
+}
+
+
+
 ########################### 
 #             GET         #
 ###########################
 
 getOrgs() {
-    curl -s --user \
-    "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
-    https://"$SRC_DTR_URL"/enzi/v0/accounts?limit=$SRC_NO_OF_REPOS | \
+    curl -s --insecure \
+    https://"$SRC_DTR_URL"/enzi/v0/accounts?refresh_token="$SRC_DTR_TOKEN" | \
     jq -c '.accounts[] | select(.isOrg==true) | {name: .name, fullName: .fullName, isOrg: .isOrg}' \
     > orgConfig
 
@@ -49,8 +60,8 @@ getOrgs() {
 getRepos() {
     cat orgList | sort -u | while IFS= read -r i;
     do
-        curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
-        https://"$SRC_DTR_URL"/api/v0/repositories/$i | \
+        curl -s --insecure \
+        https://"$SRC_DTR_URL"/api/v0/repositories/$i?refresh_token="$SRC_DTR_TOKEN" | \
         jq '.repositories[] | {name: .name, shortDescription: .shortDescription, longDescription: "", visibility: .visibility}' \
         > ./$i/repoConfig
     done
@@ -60,8 +71,8 @@ getRepos() {
 getTeams() {
     cat orgList | sort -u | while IFS= read -r i;
     do
-        curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
-        https://"$SRC_DTR_URL"/enzi/v0/accounts/$i/teams | jq -c '.teams[] | {name: .name, description: .description}' > ./$i/teamConfig
+        curl -s --insecure \
+        https://"$SRC_DTR_URL"/enzi/v0/accounts/$i/teams?refresh_token="$SRC_DTR_TOKEN" | jq -c '.teams[] | {name: .name, description: .description}' > ./$i/teamConfig
 
         cat ./$i/teamConfig | while IFS= read -r j;
         do     
@@ -77,8 +88,8 @@ getTeamMembers() {
     do
         cat ./$i/teamConfig | jq -r '.name' | while IFS= read -r j;
         do
-            curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
-            https://"$SRC_DTR_URL"/enzi/v0/accounts/${i}/teams/${j}/members | jq -c '.members[] | {name: .member.name, isAdmin: .isAdmin, isPublic: .isPublic}' \
+            curl -s --insecure \
+            https://"$SRC_DTR_URL"/enzi/v0/accounts/${i}/teams/${j}/members?refresh_token="$SRC_DTR_TOKEN" | jq -c '.members[] | {name: .member.name, isAdmin: .isAdmin, isPublic: .isPublic}' \
             > ./$i/$j/members
         done
     done
@@ -90,8 +101,8 @@ getTeamRepoAccess() {
     do
         cat ./$i/teamConfig | jq -r '.name' | while IFS= read -r j;
         do
-            curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
-            https://"$SRC_DTR_URL"/api/v0/accounts/${i}/teams/${j}/repositoryAccess | jq -c '.repositoryAccessList[]' > ./$i/$j/repoAccess
+            curl -s --insecure \
+            https://"$SRC_DTR_URL"/api/v0/accounts/${i}/teams/${j}/repositoryAccess?refresh_token="$SRC_DTR_TOKEN" | jq -c '.repositoryAccessList[]' > ./$i/$j/repoAccess
         done
     done
 }
@@ -105,8 +116,8 @@ getTeamRepoAccess() {
 putOrgs() {
     cat orgConfig | while IFS= read -r i;
     do
-        curl --insecure --user "$DEST_DTR_USER":"$DEST_DTR_PASSWORD" -X POST --header "Content-Type: application/json" \
-         --header "Accept: application/json" -d "$i" https://"$DEST_DTR_URL"/enzi/v0/accounts 
+        curl --insecure -X POST --header "Content-Type: application/json" \
+         --header "Accept: application/json" -d "$i" https://"$DEST_DTR_URL"/enzi/v0/accounts?refresh_token="$DEST_DTR_TOKEN" 
     done
 }
 
@@ -118,8 +129,8 @@ putRepos() {
     do
         cat ./$i/repoConfig | jq -c '.' | while IFS= read -r j;
         do
-            curl --insecure --user "$DEST_DTR_USER":"$DEST_DTR_PASSWORD" -X POST --header "Content-Type: application/json" \
-            --header "Accept: application/json" -d "$j" https://"$DEST_DTR_URL"/api/v0/repositories/${i}
+            curl --insecure -X POST --header "Content-Type: application/json" \
+            --header "Accept: application/json" -d "$j" https://"$DEST_DTR_URL"/api/v0/repositories/${i}?refresh_token="$DEST_DTR_TOKEN"
         done
     done
 }
@@ -129,13 +140,13 @@ putRepos() {
 putTeams() {
     cat orgList | sort -u | while IFS= read -r i;
     do
-        curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
-        https://"$SRC_DTR_URL"/enzi/v0/accounts/$i/teams | jq -c '.teams[] | {name: .name, description: .description}' > ./$i/teamConfig
+        curl -s --insecure \
+        https://"$SRC_DTR_URL"/enzi/v0/accounts/$i/teams?refresh_token="$SRC_DTR_TOKEN" | jq -c '.teams[] | {name: .name, description: .description}' > ./$i/teamConfig
 
         cat ./$i/teamConfig | while IFS= read -r j;
         do
-            curl --insecure --user "$DEST_DTR_USER":"$DEST_DTR_PASSWORD" -X POST --header "Content-Type: application/json" \
-                --header "Accept: application/json" -d "$j" https://"$DEST_DTR_URL"/enzi/v0/accounts/${i}/teams
+            curl --insecure -X POST --header "Content-Type: application/json" \
+                --header "Accept: application/json" -d "$j" https://"$DEST_DTR_URL"/enzi/v0/accounts/${i}/teams?refresh_token="$DEST_DTR_TOKEN"
         done
     done
 
@@ -150,8 +161,8 @@ putTeamMembers() {
             cat ./$i/$j | jq -c '{isAdmin: .isAdmin, isPublic: .isPublic}' | while IFS= read -r k;
             do
                 teamMemberName=$(cat ./$i/$j | jq -c -r .name)
-                curl -v --insecure --user "$DEST_DTR_USER":"$DEST_DTR_PASSWORD" -X PUT --header "Content-Type: application/json" \
-                    --header "Accept: application/json" -d "$k" https://"$DEST_DTR_URL"/enzi/v0/accounts/${i}/teams/${j}/members/${teamMemberName}
+                curl --insecure -X PUT --header "Content-Type: application/json" \
+                    --header "Accept: application/json" -d "$k" https://"$DEST_DTR_URL"/enzi/v0/accounts/${i}/teams/${j}/members/${teamMemberName}?refresh_token="$DEST_DTR_TOKEN"
             done
         done
     done
@@ -170,7 +181,7 @@ migrateImages() {
     do
         cat ./$i/repoConfig | jq -c -r '.name' | while IFS= read -r j;
         do
-            TAGS=$(curl -s --user "$SRC_DTR_USER":"$SRC_DTR_PASSWORD" --insecure \
+            TAGS=$(curl -s --insecure \
             https://"$SRC_DTR_URL"/api/v0/repositories/${i}/${j}/tags | jq -c -r '.[].name')
             
             echo "$TAGS" | jq -c -r '.' | while IFS= read -r k;
