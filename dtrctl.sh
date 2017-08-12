@@ -9,6 +9,7 @@ main() {
         getTeams
         getTeamMembers
         getTeamRepoAccess
+        echo "Sync from source DTR to local copy complete"
     fi
 
     if [ "$SYNC_ORG" ]; then
@@ -17,10 +18,13 @@ main() {
         putTeams
         putTeamMembers
         putTeamRepoAccess
+        echo "Sync from local copy to destination DTR complete"
+
     fi
 
     if [ "$SYNC_IMAGES" ]; then
         migrateImages
+        echo "Image migration from source DTR to destination DTR complete"
     fi 
 
     if [ "$PRINT_ACCESS" ]; then
