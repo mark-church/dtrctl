@@ -1,6 +1,7 @@
 #!/bin/bash
 
 main() {
+    echo "Starting dtrctl ..."
     authenticate
 
     if [ "$PULL" ]; then
@@ -215,26 +216,31 @@ putTeamRepoAccess() {
 ###########################
 
 migrateImages() {
+    echo "Image sync initiating"
+
     cat orgList | sort -u | while IFS= read -r i;
     do
+        echo "Migrating images for $i"
         cat ./$i/repoConfig | jq -c -r '.name' | while IFS= read -r j;
         do
             TAGS=$(curl -s --insecure \
-            https://"$SRC_DTR_URL"/api/v0/repositories/${i}/${j}/tags | jq -c -r '.[].name')
-            echo $TAGS
+            https://"$SRC_DTR_URL"/api/v0/repositories/${i}/${j}/tags?refresh_token="$SRC_DTR_TOKEN" | jq -c -r '.[].name')
             for k in $TAGS;  
             do
-                #docker pull "$SRC_DTR_URL/$i/$j:$k"
-                #docker tag "$SRC_DTR_URL/$i/$j:$k" "$DEST_DTR_URL/$i/$j:$k"
-                #docker push "$DEST_DTR_URL/$i/$j:$k"
-                echo $k
-            done
-            
+                echo "Pulling $SRC_DTR_URL/$i/$j:$k"
+                docker pull "$SRC_DTR_URL/$i/$j:$k"
+                docker tag "$SRC_DTR_URL/$i/$j:$k" "$DEST_DTR_URL/$i/$j:$k"
+
+                echo "Pushing $DEST_DTR_URL/$i/$j:$k"
+                docker push "$DEST_DTR_URL/$i/$j:$k"
+            done      
             #Clean up images after each repo
+            #echo "Repo $i complete. Pruning local images."
             #docker image prune -af
         done
         #Clean up images after each Org
-        #docker image prune -af
+        echo "Org $i complete. Pruning local images."
+        docker image prune -af
     done
 }
 

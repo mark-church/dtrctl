@@ -10,12 +10,11 @@ RUN apt-get update &&\
   apt-get install -y docker-ce &&\
   rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/docker.list
 
+RUN mkdir /dtrctl
 
-COPY dtrctl.sh /dtrctl.sh
+COPY dtrctl.sh /dtrctl/dtrctl.sh
 
-RUN mkdir /dtrsync
-
-WORKDIR /dtrsync
+WORKDIR /dtrctl
 
 ENTRYPOINT ["/dtrctl.sh"]
 

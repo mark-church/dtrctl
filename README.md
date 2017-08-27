@@ -71,30 +71,30 @@ The following volumes are configureable and specify the output location of the D
 Once the metadata is pulled locally its structure will look like this:
 
 ```
-$ tree ~/dtrsync
-.
-├── conf
+$ tree ~/dtrsync/
 ├── docker-datacenter
 │   ├── repoConfig
-│   ├── sdsfdf
-│   │   ├── members
-│   │   └── repoAccess
 │   └── teamConfig
 ├── org1
 │   ├── repoConfig
-│   ├── team1
+│   ├── t1
 │   │   ├── members
 │   │   └── repoAccess
-│   ├── team2
-│   │   ├── members
-│   │   └── repoAccess
-│   ├── team3
+│   ├── t2
 │   │   ├── members
 │   │   └── repoAccess
 │   └── teamConfig
 ├── org2
 │   ├── repoConfig
-│   ├── team1
+│   └── teamConfig
+├── org3
+│   ├── repoConfig
+│   ├── t3
+│   │   ├── members
+│   │   └── repoAccess
+│   └── teamConfig
+├── orgConfig
+└── orgList
 ...
 ```
 
@@ -127,13 +127,7 @@ $ git pull https://github.com/mark-church/dtrctl.git
 
 $ cd dtrctl
 
-$ docker run --rm -it \
--v /var/run/docker.sock:/var/run/docker.sock \
--v /etc/docker:/etc/docker \
--v ~/dtrsync:/dtrsync \
---env-file conf.env \
--v ${pwd}:/dtrctl
-chrch/dtrctl -i
+$ docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock -v /etc/docker:/etc/docker -v ~/dtrsync:/dtrsync --env-file conf.env -v ~/lab/dtrctl:/dtrctl chrch/dtrctl
 ```
 
 
