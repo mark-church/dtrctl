@@ -280,14 +280,14 @@ printAccessMap() {
 usage() {
     echo ""
     echo "Usage: dtrctl -c [confguration file] COMMAND"
-    echo "Pronounced: dee-tee-arr-cuttle"
+    echo "Pronounced: dtr-control"
     echo ""
     echo "Options"
     echo ""
-    echo "-p, --push-metadata    Migrate orgs, repos, teams, and access rights from src to dest DTR"
-    echo "-i, --sync-image       Migrate all images from src to dest DTR"
+    echo "-s, --source-metadata  Pull org, repo, team, and team access metadata from source DTR and store locally"
+    echo "-p, --push-metadata    Push org, repo, team, and team access metadata from local source to dest DTR"
+    echo "-i, --image-sync       Pull images from source DTR and push to dest DTR"
     echo "-a, --print-access     Print mapping of access rights between teams and repos"
-    echo "-s, --source-metadata  Sync data locally from source DTR"
     echo "--help                 Print usage"
     echo ""
 }
@@ -303,7 +303,7 @@ do
         shift 1
         ;;
 
-        -i|--sync-images)
+        -i|--image-sync)
         SYNC_IMAGES=1
         shift 1
         ;;

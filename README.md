@@ -51,7 +51,7 @@ docker run --rm -it \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v /etc/docker:/etc/docker \
 -v ~/dtrsync:/dtrsync \
---env-file ~/conf.env \
+--env-file conf.env \
 chrch/dtrctl -s 
 ```
 
@@ -65,7 +65,7 @@ The following volumes are configureable and specify the output location of the D
 
 ```
 -v ~/dtrsync:/dtrsync \
---env-file ~/conf.env \
+--env-file conf.env \
 ```
 
 Once the metadata is pulled locally its structure will look like this:
@@ -98,19 +98,42 @@ $ tree ~/dtrsync
 ...
 ```
 
-### Sync org metadata from the local source to a destination DTR
+### Push org/team/repo metadata to dest DTR
 
 ```
 docker run --rm -it \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v /etc/docker:/etc/docker \
 -v ~/dtrsync:/dtrsync \
---env-file ~/conf.env \
-chrch/dtrctl
+--env-file conf.env \
+chrch/dtrctl -p
 ```
 
 ### Sync org metadata and images from a source DTR to a destination DTR
 
 ```
-$ ./dtrctl.sh -c conf --sync-org --sync-images
+docker run --rm -it \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v /etc/docker:/etc/docker \
+-v ~/dtrsync:/dtrsync \
+--env-file conf.env \
+chrch/dtrctl -i
 ```
+
+
+### Develop dtrctl locally
+```
+$ git pull https://github.com/mark-church/dtrctl.git
+
+$ cd dtrctl
+
+$ docker run --rm -it \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v /etc/docker:/etc/docker \
+-v ~/dtrsync:/dtrsync \
+--env-file conf.env \
+-v ${pwd}:/dtrctl
+chrch/dtrctl -i
+```
+
+

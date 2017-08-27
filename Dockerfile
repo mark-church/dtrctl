@@ -1,7 +1,6 @@
 FROM ubuntu:16.04
-MAINTAINER Mark Church <church@docker.com>
 
-ARG DOCKER_EE_URL
+MAINTAINER Mark Church <church@docker.com>
 
 RUN apt-get update &&\
   apt-get install -y apt-transport-https ca-certificates curl jq &&\
@@ -19,4 +18,5 @@ RUN mkdir /dtrsync
 WORKDIR /dtrsync
 
 ENTRYPOINT ["/dtrctl.sh"]
+
 CMD ["--help"]
