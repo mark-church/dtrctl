@@ -3,7 +3,12 @@
 main() {
     authenticate
 
-    if [ ! "$SKIP_SYNC" ]; then
+    if [ "$PULL" ]; then
+        if [ ! $SRC_DTR_URL ]; then
+            echo "error: No source DTR specified"
+            exit 1
+        fi
+  
         getOrgs
         getRepos
         getTeams
@@ -12,7 +17,12 @@ main() {
         echo "Sync from source DTR to local copy complete"
     fi
 
-    if [ "$SYNC_ORG" ]; then
+    if [ "$PUSH" ]; then
+        if [ ! $DEST_DTR_URL ]; then
+            echo "error: No destination DTR specified"
+            exit 1
+        fi
+
         putOrgs
         putRepos
         putTeams
@@ -33,11 +43,33 @@ main() {
 }
 
 authenticate() {
-    docker login "$SRC_DTR_URL" -u "$SRC_DTR_USER" -p "$SRC_DTR_PASSWORD"
-    SRC_DTR_TOKEN=$(cat ~/.docker/config.json | jq -r ".auths[\"$SRC_DTR_URL\"].identitytoken")
+    
+    if [ $SRC_DTR_URL ]; then
+        echo "Authenticating and logging in to $SRC_DTR_URL"
+        if [ ! -d "/etc/docker/certs.d/${SRC_DTR_URL}" ]; then
+            mkdir -p /etc/docker/certs.d/"${SRC_DTR_URL}"
+        fi
 
-    docker login "$DEST_DTR_URL" -u "$DEST_DTR_USER" -p "$DEST_DTR_PASSWORD"
-    DEST_DTR_TOKEN=$(cat ~/.docker/config.json | jq -r ".auths[\"$DEST_DTR_URL\"].identitytoken")
+        curl -ksf https://"${SRC_DTR_URL}"/ca > /etc/docker/certs.d/"${SRC_DTR_URL}"/ca.crt
+        openssl s_client -host "${SRC_DTR_URL}" -port 443 </dev/null 2>/dev/null | openssl x509 -outform PEM > /etc/docker/certs.d/"${SRC_DTR_URL}"/ca.crt
+
+        docker login "$SRC_DTR_URL" -u "$SRC_DTR_USER" -p "$SRC_DTR_PASSWORD"
+        SRC_DTR_TOKEN=$(cat ~/.docker/config.json | jq -r ".auths[\"$SRC_DTR_URL\"].identitytoken")
+    fi
+
+    
+    if [ $DEST_DTR_URL ]; then
+        echo "Authenticating and logging in to $DEST_DTR_URL"
+        if [ ! -d "/etc/docker/certs.d/${DEST_DTR_URL}" ]; then
+            mkdir -p /etc/docker/certs.d/"${DEST_DTR_URL}"
+        fi
+
+        curl -ksf https://"${DEST_DTR_URL}"/ca > /etc/docker/certs.d/"${DEST_DTR_URL}"/ca.crt
+        openssl s_client -host "${DEST_DTR_URL}" -port 443 </dev/null 2>/dev/null | openssl x509 -outform PEM > /etc/docker/certs.d/"${DEST_DTR_URL}"/ca.crt
+
+        docker login "$DEST_DTR_URL" -u "$DEST_DTR_USER" -p "$DEST_DTR_PASSWORD"
+        DEST_DTR_TOKEN=$(cat ~/.docker/config.json | jq -r ".auths[\"$DEST_DTR_URL\"].identitytoken")
+    fi
 }
 
 
@@ -163,9 +195,9 @@ putTeamMembers() {
     do
         cat ./$i/teamConfig | jq -r '.name' | while IFS= read -r j;
         do
-            cat ./$i/$j | jq -c '{isAdmin: .isAdmin, isPublic: .isPublic}' | while IFS= read -r k;
+            cat ./$i/$j/members | while IFS= read -r k;
             do
-                teamMemberName=$(cat ./$i/$j | jq -c -r .name)
+                teamMemberName=$(echo $k | jq -c -r .name)
                 curl --insecure -X PUT --header "Content-Type: application/json" \
                     --header "Accept: application/json" -d "$k" https://"$DEST_DTR_URL"/enzi/v0/accounts/${i}/teams/${j}/members/${teamMemberName}?refresh_token="$DEST_DTR_TOKEN"
             done
@@ -183,27 +215,26 @@ putTeamRepoAccess() {
 ###########################
 
 migrateImages() {
-    docker login "$SRC_DTR_URL" --username "$SRC_DTR_USER" --password "$SRC_DTR_PASSWORD";
-    docker login "$DEST_DTR_URL" --username "$SRC_DTR_USER" --password "$SRC_DTR_PASSWORD";
     cat orgList | sort -u | while IFS= read -r i;
     do
         cat ./$i/repoConfig | jq -c -r '.name' | while IFS= read -r j;
         do
             TAGS=$(curl -s --insecure \
             https://"$SRC_DTR_URL"/api/v0/repositories/${i}/${j}/tags | jq -c -r '.[].name')
-            
+            echo $TAGS
             for k in $TAGS;  
             do
-                docker pull "$SRC_DTR_URL/$i/$j:$k"
-                docker tag "$SRC_DTR_URL/$i/$j:$k" "$DEST_DTR_URL/$i/$j:$k"
-                docker push "$DEST_DTR_URL/$i/$j:$k"
+                #docker pull "$SRC_DTR_URL/$i/$j:$k"
+                #docker tag "$SRC_DTR_URL/$i/$j:$k" "$DEST_DTR_URL/$i/$j:$k"
+                #docker push "$DEST_DTR_URL/$i/$j:$k"
+                echo $k
             done
             
             #Clean up images after each repo
             #docker image prune -af
         done
         #Clean up images after each Org
-        docker image prune -af
+        #docker image prune -af
     done
 }
 
@@ -253,11 +284,10 @@ usage() {
     echo ""
     echo "Options"
     echo ""
-    echo "-c, --config           Set configuration file that contians env variable assignments for src and dest DTRs"
-    echo "-o, --sync-org      Migrate orgs, repos, teams, and access rights from src to dest DTR"
-    echo "-i, --sync-image    Migrate all images from src to dest DTR"
-    echo "-p, --print-access     Print mapping of access rights between teams and repos"
-    echo "-s, --skip-sync        Skip sync with source DTR"
+    echo "-p, --push-metadata    Migrate orgs, repos, teams, and access rights from src to dest DTR"
+    echo "-i, --sync-image       Migrate all images from src to dest DTR"
+    echo "-a, --print-access     Print mapping of access rights between teams and repos"
+    echo "-s, --source-metadata  Sync data locally from source DTR"
     echo "--help                 Print usage"
     echo ""
 }
@@ -268,8 +298,8 @@ usage() {
 while [[ $# -gt 0 ]]
 do
     case "$1" in
-        -o|--sync-org)
-        SYNC_ORG=1
+        -p|--push-metadata)
+        PUSH=1
         shift 1
         ;;
 
@@ -278,19 +308,13 @@ do
         shift 1
         ;;
 
-        -p|--print-access)
+        -a|--print-access)
         PRINT_ACCESS=1
         shift 1
         ;;
 
-        -c|--config)
-        CONFIG_PATH="$2"
-        source "$CONFIG_PATH"
-        shift 2
-        ;;
-
-        -s|--skip-sync)
-        SKIP_SYNC=1
+        -s|--source-metadata)
+        PULL=1
         shift 1
         ;;
 
@@ -310,6 +334,8 @@ done
 
 #Entrypoint for program
 main
+
+
 
 
 
