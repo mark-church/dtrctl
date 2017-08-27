@@ -11,17 +11,17 @@ A tool that can do different kinds of operations to a Docker Trusted Registry. S
 ```
 ./dtrctl.sh --help
 
-Usage: dtrctl -c [confguration file] COMMAND
-Pronounced: dee-tee-arr-cuttle
+Usage: dtrctl COMMAND(s)
+Pronounced: dtr-control
 
 Options
 
 
--o, --migrate-org      Migrate orgs, repos, teams, and access rights from src to dest DTR
--i, --migrate-image    Migrate all images from src to dest DTR
--p, --print-access     Print mapping of access rights between teams and repos
--s, --sync-source             Sync data locally from source DTR
---help
+-s, --source-metadata  Pull org, repo, team, and team access metadata from source DTR and store locally
+-p, --push-metadata    Push org, repo, team, and team access metadata from local source to dest DTR
+-i, --image-sync       Pull images from source DTR and push to dest DTR
+-a, --print-access     Print mapping of access rights between teams and repos
+--help                 Print usage
 ```
 
 ### Configuration file format
@@ -38,6 +38,8 @@ DEST_DTR_URL=
 DEST_DTR_USER=
 DEST_DTR_PASSWORD=
 ```
+
+Requirements
 
 ## Examples
 
@@ -123,11 +125,17 @@ chrch/dtrctl -i
 
 ### Develop dtrctl locally
 ```
-$ git pull https://github.com/mark-church/dtrctl.git
+$ git clone https://github.com/mark-church/dtrctl.git
 
-$ cd dtrctl
+$ cd ~/dtrctl
 
-$ docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock -v /etc/docker:/etc/docker -v ~/dtrsync:/dtrsync --env-file conf.env -v ~/lab/dtrctl:/dtrctl chrch/dtrctl
+$ docker run --rm -it \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v /etc/docker:/etc/docker \
+-v ~/dtrsync:/dtrsync \
+--env-file conf.env \
+-v ~/dtrctl:/dtrctl \
+chrch/dtrctl
 ```
 
 
