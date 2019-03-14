@@ -16,6 +16,6 @@ COPY dtrctl.sh /dtrctl/dtrctl.sh
 
 WORKDIR /dtrctl
 
-ENTRYPOINT ["/dtrctl.sh"]
+ENTRYPOINT ["/dtrctl/dtrctl.sh"]
 
 CMD ["--help"]
